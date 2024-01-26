@@ -1,3 +1,4 @@
+Brewfile.lock.json
 aks-ingress-tls.crt
 aks-ingress-tls.key
 aks-ingress-tls.pfx
