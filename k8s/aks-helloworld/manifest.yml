@@ -31,8 +31,8 @@ spec:
     spec:
       containers:
         - name: aks-helloworld
-          image: mcr.microsoft.com/azuredocs/aks-helloworld:v1
-          #image: acradtrdemo.azurecr.io/nginx:v1
+          #image: mcr.microsoft.com/azuredocs/aks-helloworld:v1
+          image: nginx:lastest
           ports:
             - containerPort: 80
           volumeMounts:

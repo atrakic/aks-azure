@@ -26,7 +26,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: demo-svc
+  name: demo
 spec:
   selector:
     app: demo
@@ -34,7 +34,7 @@ spec:
    - protocol: "TCP"
      port: 8080
      targetPort: 8080
-  type: ClusterIP
+  type: ClusterIP # LoadBalancer
 ---
 apiVersion: "networking.k8s.io/v1"
 kind: "Ingress"
@@ -54,6 +54,6 @@ spec:
           pathType: "Prefix"
           backend:
             service:
-              name: "demo-svc"
+              name: "demo"
               port:
                 number: 8080

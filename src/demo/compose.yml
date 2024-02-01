@@ -1,0 +1,9 @@
+services:
+  app:
+    build:
+      context: .
+    container_name: app
+    environment:
+      - ASPNETCORE_HTTP_PORTS=8080
+    ports:
+      - 8080:8080

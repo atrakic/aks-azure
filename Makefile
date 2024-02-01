@@ -7,23 +7,24 @@ AKS := aks-$(NAME)
 LOCATION := westeurope
 
 ifeq ($(origin ACR), undefined)
-ACR = acr$(shell whoami)$(NAME)	# may contain alpha numeric characters only and must be between 5 and 50 characters
+ACR = acr$(shell whoami)$(NAME)
 endif
 
 export AZURE_DEFAULTS_GROUP=$(RG)
 export AZURE_DEFAULTS_LOCATION=$(LOCATION)
 
-all:
-	set -x
+az-login:
+	az account show || az login
+	az acr show --name $(ACR) --query loginServer --output tsv || az acr create --name $(ACR) --sku Basic --admin-enabled true
 	echo AZURE_DEFAULTS_LOCATION=$(LOCATION)
 	echo AZURE_DEFAULTS_GROUP=$(RG)
 	echo NAME=$(NAME)
 	echo AKS=$(AKS)
+	echo ACR=$(ACR)
 
+# https://docs.microsoft.com/en-US/cli/azure/aks#az_aks_create
 aks.create: az-login
 	az group create --name $(RG)
-	az acr create --name $(ACR) --sku Basic --admin-enabled true
-	az acr login --name $(ACR)
 	az aks create \
 		--name $(AKS) \
 		--attach-acr $(ACR) \
@@ -31,8 +32,8 @@ aks.create: az-login
 		--generate-ssh-keys \
 		--enable-cluster-autoscaler --min-count 1 --max-count 2 \
 		--enable-managed-identity \
+		--enable-addons monitoring \
 		--enable-app-routing
-	az aks check-acr --name $(AKS) --acr $(ACR).azurecr.io
 	$(MAKE) kubeconfig
 	kubectl cluster-info -o wide
 	kubectl get nodes
@@ -42,29 +43,27 @@ aks.stop:
 
 aks.start:
 	az aks start --name $(AKS)
-	$(MAKE) set.auth.ip
 
-deploy.demo: az-login
+deploy.demo: az-login ## Build and push image to ACR
+	#az acr check-health -n $(ACR) --yes
+	#az aks check-acr --name $(AKS) --acr $(ACR).azurecr.io
+	#az acr repository list --name $(ACR)
+	az acr login --name $(ACR)
 	az acr build --image demo/my-app:v1 --registry $(ACR) --file $(BASEDIR)/src/demo/Dockerfile $(BASEDIR)/src/demo
-	kubectl apply -f $(BASEDIR)/deployments/demo/manifest.yml
+	kubectl apply -f $(BASEDIR)/k8s/demo/manifest.yml
+	# Waiting deployment to finish
+	kubectl get service demo --watch
 
-install.tools:
+kubeconfig:
+	type -a kubectl &>/dev/null || az aks install-cli
+	az aks get-credentials --name $(AKS) --overwrite-existing
+
+install.extensions:
 	az extension add --name aks-preview
 
-#IP=$(shell dig +short "myip.opendns.com" "@resolver1.opendns.com")
 IP=$(shell curl -skL ifconfig.me)
 set.auth.ip:
 	az aks update --name $(AKS) --api-server-authorized-ip-ranges $(IP)/32
-
-kubeconfig:
-	az aks get-credentials --name $(AKS) --overwrite-existing
-
-az-login:
-	az account show || az login
-
-acr-list:
-	az acr check-health -n $(ACR) --yes
-	az acr repository list --name $(ACR)
 
 clean:
 	az group delete --name $(RG) --yes --no-wait
