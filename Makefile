@@ -15,16 +15,14 @@ export AZURE_DEFAULTS_LOCATION=$(LOCATION)
 
 az-login:
 	az account show || az login
+	az group exists --name $(RG) || az group create --name $(RG)
 	az acr show --name $(ACR) --query loginServer --output tsv || az acr create --name $(ACR) --sku Basic --admin-enabled true
 	echo AZURE_DEFAULTS_LOCATION=$(LOCATION)
 	echo AZURE_DEFAULTS_GROUP=$(RG)
-	echo NAME=$(NAME)
 	echo AKS=$(AKS)
 	echo ACR=$(ACR)
 
-# https://docs.microsoft.com/en-US/cli/azure/aks#az_aks_create
 aks.create: az-login
-	az group create --name $(RG)
 	az aks create \
 		--name $(AKS) \
 		--attach-acr $(ACR) \
