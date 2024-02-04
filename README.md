@@ -1,4 +1,4 @@
-# aks-linux-box
+# aks-azure
 
 > My sandbox environment to build and deploy containers in Azure AKS.
 
