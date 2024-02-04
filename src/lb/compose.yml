@@ -1,0 +1,22 @@
+services:
+  lb:
+    build:
+      context: .
+      args:
+        APP_VERSION: 0.0.0-beta
+        APP_SERVER: example.azurewebsites.net
+    container_name: lb
+    healthcheck:
+      test: ["CMD-SHELL", "nginx -qt || exit 1"]
+      interval: "5s"
+    ports:
+      - 8000:8000
+      - 8080:80
+
+  test-client:
+    image: curlimages/curl
+    container_name: test-client
+    command: |
+      sh -c "curl -qL http://lb/health"
+    depends_on:
+      - lb
