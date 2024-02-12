@@ -1,11 +1,14 @@
-FROM nginx
-EXPOSE 8080
+ARG PYTHON_VERSION=alpine
 
-ARG APP_SERVER=foo.bar.com
-ENV APP_SERVER=$APP_SERVER
+FROM python:${PYTHON_VERSION} as build
+WORKDIR /app
+ARG HOSTNAMES=
+ENV HOSTNAMES=$HOSTNAMES
+COPY --chmod=0755 configure.py /usr/local/bin
+RUN configure.py
 
+FROM nginx as final
 ARG APP_VERSION=0.1.0
 ENV APP_VERSION=$APP_VERSION
-
-COPY nginx.conf /tmp/nginx.conf.template
-CMD ["sh", "-c", "envsubst '${APP_VERSION},${APP_SERVER}' < /tmp/nginx.conf.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"]
+COPY --from=0 /app/nginx.conf.template /tmp/.nginx.conf.template
+CMD ["sh", "-c", "envsubst '${APP_VERSION}' < /tmp/.nginx.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
