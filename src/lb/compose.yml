@@ -4,10 +4,11 @@ services:
       context: .
       args:
         APP_VERSION: 0.0.0-beta
-        HOSTNAMES: bar.test.com,baz.test.com
+        SERVER_NAME: 'foo.bar.com *.lb.local.gd'
+        HOSTNAMES: 'bar.test.com,baz.test.com'
     container_name: lb
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf -o /dev/null localhost/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf localhost/health || exit 1"]
       interval: "5s"
     ports:
       - 8080:80
