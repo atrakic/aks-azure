@@ -63,6 +63,9 @@ IP=$(shell curl -skL ifconfig.me)
 set.auth.ip:
 	az aks update --name $(AKS) --api-server-authorized-ip-ranges $(IP)/32
 
+acr.login:
+	az acr credential show -n $(ACR) --query passwords[0].value --output tsv | docker login $(ACR).azurecr.io -u admin --password-stdin
+
 clean:
 	az group delete --name $(RG) --yes --no-wait
 	az aks list
