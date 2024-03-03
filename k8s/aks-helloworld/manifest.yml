@@ -8,7 +8,7 @@ data:
     <!DOCTYPE html>
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
-        <title>Welcome to KP.dk Azure Kubernetes Service (AKS)</title>
+        <title>Welcome to Azure Kubernetes Service (AKS)</title>
     </head>
     <body>
       <div id="container"></div>
