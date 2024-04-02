@@ -17,6 +17,7 @@ services:
     image: curlimages/curl
     container_name: test-client
     command: |
-      sh -c "curl -sL http://lb/health"
+      sh -c "curl -sIL http://lb/status"
     depends_on:
-      - lb
+      lb:
+        condition: service_healthy

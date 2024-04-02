@@ -4,9 +4,15 @@ import os
 
 
 def generate_nginx_config(hostnames: str = None):
+    """
+    Generate an Nginx configuration for a load balancing
+    """
+
     hosts = hostnames.split(",")
 
     config = "upstream backend {\n"
+    config += "    zone backend 64k;\n"  # Define a shared memory zone
+    config += "    least_conn;\n"  # Use the least number of connections
 
     for host in hosts:
         config += f"    server {host.strip()};\n"
@@ -40,13 +46,12 @@ def generate_nginx_config(hostnames: str = None):
 
 
 if __name__ == "__main__":
-
     hostnames = os.environ.get("HOSTNAMES")
     if not hostnames:
-        print("Hostnames variable is empty. Exiting...")
-        exit()
+        raise ValueError("The environment variable HOSTNAMES must be set")
 
     nginx_config = generate_nginx_config(hostnames)
 
+    # Write the generated config to a file, see: 20-envsubst-on-templates.sh
     with open("nginx.conf.template", "w") as file:
         file.write(nginx_config)
