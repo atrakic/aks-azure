@@ -4,6 +4,18 @@ services:
       context: .
     container_name: app
     environment:
+      - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
     ports:
       - 8080:8080
+
+  otel-collector:
+    image: otel/opentelemetry-collector:0.33.0
+    container_name: otel-collector
+    volumes:
+      - ./collector-config.yaml:/etc/otel-collector/collector-config.yaml
+    ports:
+      - 4317:4317
+      - 55678:55678
+    depends_on:
+      - app
