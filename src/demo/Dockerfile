@@ -8,7 +8,7 @@ COPY aspnetapp/. .
 RUN dotnet publish --no-restore -o /app
 
 FROM mcr.microsoft.com/dotnet/aspnet:${VERSION} as final
-LABEL org.opencontainers.image.source="https://github.com/atrakic/aks-linux-box.git"
+LABEL org.opencontainers.image.source="https://github.com/atrakic/aks-azure.git"
 EXPOSE 8080
 WORKDIR /app
 COPY --from=build /app .
