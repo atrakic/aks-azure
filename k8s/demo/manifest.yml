@@ -43,11 +43,11 @@ metadata:
 spec:
   #tls:
   #  hosts:
-  #    - "demo.adtr.kp.dk"
-  #secretName: keyvault-demo-adtr-kp-dk
+  #    - "demo.adtr"
+  #secretName: keyvault-demo-adtr
   ingressClassName: webapprouting.kubernetes.azure.com
   rules:
-    - host: "demo.adtr.kp.dk"
+    - host: "demo.adtr"
       http:
         paths:
         - path: "/"
