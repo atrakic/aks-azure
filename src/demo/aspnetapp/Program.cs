@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -6,6 +6,15 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddHealthChecks();
+
+/**
+builder.Services.AddOpenTelemetryTracing(builder =>
+{
+    builder.AddAspNetCoreInstrumentation()
+           .AddHttpClientInstrumentation()
+           .AddJaegerExporter();
+});
+*/
 
 // builder.Services.ConfigureHttpJsonOptions(options =>
 // {

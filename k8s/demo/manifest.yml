@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: demo
-          image: acradtrdemo.azurecr.io/demo/my-app:v1
+          image: acradtrdemo.azurecr.io/demo/my-app:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -43,11 +43,11 @@ metadata:
 spec:
   #tls:
   #  hosts:
-  #    - "demo.adtr.kp.dk"
-  #secretName: keyvault-demo-adtr-kp-dk
+  #    - "demo.adtr"
+  #secretName: keyvault-demo-adtr
   ingressClassName: webapprouting.kubernetes.azure.com
   rules:
-    - host: "demo.adtr.kp.dk"
+    - host: "demo.adtr"
       http:
         paths:
         - path: "/"

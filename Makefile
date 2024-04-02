@@ -1,70 +1,58 @@
-MAKEFLAGS += --silent
-BASEDIR=$(shell git rev-parse --show-toplevel)
+#MAKEFLAGS += --silent
 
-NAME := demo
-RG := rg-$(NAME)
-AKS := aks-$(NAME)
-LOCATION := westeurope
+BASEDIR=$(shell git rev-parse --show-toplevel)
+GITHUB_SHA=$(shell git rev-parse --short HEAD)
 
 ifeq ($(origin ACR), undefined)
 ACR = acr$(shell whoami)$(NAME)
 endif
 
-export AZURE_DEFAULTS_GROUP=$(RG)
-export AZURE_DEFAULTS_LOCATION=$(LOCATION)
+export AZURE_DEFAULTS_LOCATION=${AZURE_DEFAULTS_LOCATION:-westeurope}
+export AZURE_DEFAULTS_GROUP=${AZURE_DEFAULTS_GROUP:-rg-$(NAME)}
 
-az-login:
+all: az-login acr-login aks-create build deploy-demo test
+
+az-login: install-extensions
 	az account show || az login
-	az group exists --name $(RG) || az group create --name $(RG)
-	az acr show --name $(ACR) --query loginServer --output tsv || az acr create --name $(ACR) --sku Basic --admin-enabled true
-	echo AZURE_DEFAULTS_LOCATION=$(LOCATION)
-	echo AZURE_DEFAULTS_GROUP=$(RG)
-	echo AKS=$(AKS)
-	echo ACR=$(ACR)
+	if [ $$(az group exists --name $(RG)) = false ]; then \
+		az group create --name $(RG); \
+	fi; \
+	az acr show --name $(ACR) --query loginServer --output tsv || \
+		az acr create --name $(ACR) --sku Basic --admin-enabled true
 
-aks.create: az-login
-	az aks create \
+aks-create:
+	az aks show --name $(AKS) --resource-group $(RG) || az aks create \
 		--name $(AKS) \
+		--resource-group $(RG) \
+		--location $(AZURE_DEFAULTS_LOCATION) \
 		--attach-acr $(ACR) \
 		--node-count 1 \
 		--generate-ssh-keys \
-		--enable-cluster-autoscaler --min-count 1 --max-count 2 \
 		--enable-managed-identity \
 		--enable-addons monitoring \
 		--enable-app-routing
 	$(MAKE) kubeconfig
-	kubectl cluster-info -o wide
-	kubectl get nodes
+	kubectl cluster-info
+	kubectl get nodes -o wide
 
-aks.stop:
-	az aks stop --name $(AKS)
+build: ## Build and push image to ACR
+	az acr build \
+		--image $(IMAGE_NAME) \
+		--registry $(ACR) \
+		--file $(BASEDIR)/$(DOCKERFILE) \
+		$(BASEDIR)/$(SOURCE_PATH)
 
-aks.start:
-	az aks start --name $(AKS)
-
-deploy.demo: az-login ## Build and push image to ACR
-	#az acr check-health -n $(ACR) --yes
-	#az aks check-acr --name $(AKS) --acr $(ACR).azurecr.io
-	#az acr repository list --name $(ACR)
-	az acr login --name $(ACR)
-	az acr build --image demo/my-app:v1 --registry $(ACR) --file $(BASEDIR)/src/demo/Dockerfile $(BASEDIR)/src/demo
+deploy-demo:
 	kubectl apply -f $(BASEDIR)/k8s/demo/manifest.yml
-	# Waiting deployment to finish
-	kubectl get service demo --watch
+	kubectl wait --for=condition=available --timeout=600s deployment/$(NAME)
+	
+test:	
+	curl -k -H "Host: demo.adtr" https://$(shell kubectl get ing $(NAME) -o jsonpath='{.status.loadBalancer.ingress[0].ip}')/healthz
 
-kubeconfig:
-	type -a kubectl &>/dev/null || az aks install-cli
-	az aks get-credentials --name $(AKS) --overwrite-existing
-
-install.extensions:
-	az extension add --name aks-preview
-
-IP=$(shell curl -skL ifconfig.me)
-set.auth.ip:
-	az aks update --name $(AKS) --api-server-authorized-ip-ranges $(IP)/32
-
-clean:
+clean: aks-stop
 	az group delete --name $(RG) --yes --no-wait
 	az aks list
 
--include .env
+.PHONY: az-login aks-create aks-stop aks-start build deploy-demo acr-login kubeconfig install-extensions set-auth-ip clean
+
+-include .github/.env .include.mk
