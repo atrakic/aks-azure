@@ -4,26 +4,28 @@ receivers:
       grpc:
         endpoint: localhost:4317
       http:
+        endpoint: localhost:4318
   zipkin:
 
 exporters:
   debug:
     # verbosity: detailed
   prometheus:
-    endpoint: "0.0.0.0:8889"
+    endpoint: "${env:PROMETHEUS_ENDPOINT}"
   logging:
     verbosity: detailed
-  zipkin:
-    endpoint: "http://zipkin-all-in-one:9411/api/v2/spans"
-    format: proto
+  #zipkin:
+  #  endpoint: "${env:ZIPKIN_ENDPOINT}"
+  #  format: proto
   otlp:
-    endpoint: jaeger-all-in-one:4317
+    endpoint: "${env:JAEGER_ENDPOINT}"
+    #endpoint: "otel-collector:4317"
     tls:
       insecure: true
-  #loki:
-  #  endpoint: "http://loki:3100/loki/api/v1/push"
-  #  tls:
-  #    insecure: true
+  loki:
+    endpoint: "${env:LOKI_ENDPOINT}"
+    tls:
+      insecure: true
 
 processors:
   batch:
@@ -31,16 +33,15 @@ processors:
 extensions:
   health_check:
   pprof:
-    endpoint: :1888
   zpages:
-    endpoint: :55679
 
 service:
+  extensions: [health_check, pprof, zpages]
   pipelines:
     traces:
       receivers:
         - otlp
-        - zipkin
+        #- zipkin
       processors: [batch]
       exporters:
         - debug
@@ -58,7 +59,4 @@ service:
       processors: [batch]
       exporters:
         - logging
-        #- loki
-  extensions:
-    - zpages
-    - health_check
+        - loki
