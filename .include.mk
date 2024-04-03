@@ -4,8 +4,8 @@ aks-stop:
 aks-start:
 	az aks start --name $(CLUSTER_NAME)
 
-acr-login: az-login
-  az acr login --name $(CONTAINER_REGISTRY)
+acr-login:
+	az acr login --name $(CONTAINER_REGISTRY)
   #az acr check-health -n $(CONTAINER_REGISTRY) --yes
   #az aks check-acr --name $(CLUSTER_NAME) --acr $(CONTAINER_REGISTRY).azurecr.io
   #az acr repository list --name $(CONTAINER_REGISTRY)

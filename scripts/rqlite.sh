@@ -8,7 +8,7 @@ helm upgrade -n rqlite --create-namespace rqlite \
   --set readonly.replicaCount=0 \
   --set persistence.size=1Gi --set replicaCount=3
 
-if [ "$1" = "--delete" ]; then 
+if [ "$1" = "--delete" ]; then
   helm uninstall rqlite --namespace rqlite
   kubectl delete ns rqlite
 fi
