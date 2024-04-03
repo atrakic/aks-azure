@@ -6,12 +6,12 @@ services:
     container_name: app
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_HTTP_PORTS=5000
       # Enable OpenTelemetry .NET Automatic Instrumentation
       - OTEL_SERVICE_NAME="aspnetapp"
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
     ports:
-      - 8080:8080
+      - "5000:5000"
     depends_on:
       - otel-collector
 
@@ -44,8 +44,14 @@ services:
   jaeger:
     image: jaegertracing/all-in-one:1.50.0
     container_name: jaeger
+    command:
+      - "--memory.max-traces=5000"
     ports:
       - "16686:16686" # Jaeger Web UI
+    deploy:
+      resources:
+        limits:
+          memory: 400M
 
   loki:
     image: grafana/loki:2.7.4
