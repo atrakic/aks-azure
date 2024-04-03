@@ -3,14 +3,14 @@ receivers:
     protocols:
       grpc:
         endpoint: localhost:4317
-      #http:
+      http:
+  zipkin:
 
 exporters:
   debug:
+    # verbosity: detailed
   prometheus:
     endpoint: "0.0.0.0:8889"
-    const_labels:
-      label1: value1
   logging:
     verbosity: detailed
   zipkin:
@@ -20,6 +20,10 @@ exporters:
     endpoint: jaeger-all-in-one:4317
     tls:
       insecure: true
+  #loki:
+  #  endpoint: "http://loki:3100/loki/api/v1/push"
+  #  tls:
+  #    insecure: true
 
 processors:
   batch:
@@ -32,15 +36,29 @@ extensions:
     endpoint: :55679
 
 service:
-  extensions: [pprof, zpages, health_check]
   pipelines:
     traces:
-      receivers: [otlp]
+      receivers:
+        - otlp
+        - zipkin
       processors: [batch]
-      exporters: [logging, zipkin]
+      exporters:
+        - debug
+        - otlp
     metrics:
-      receivers: [otlp]
-      exporters: [logging, prometheus]
+      receivers:
+        - otlp
+      processors: [batch]
+      exporters:
+        - debug
+        - prometheus
     logs:
-      receivers: [otlp]
-      exporters: [logging]
+      receivers:
+        - otlp
+      processors: [batch]
+      exporters:
+        - logging
+        #- loki
+  extensions:
+    - zpages
+    - health_check

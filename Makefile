@@ -31,6 +31,7 @@ aks-create: ## Create AKS cluster
 		--enable-managed-identity \
 		--enable-addons monitoring \
 		--enable-app-routing # --enable-cluster-autoscaler --min-count 1 --max-count 2
+	## az aks nodepool add -g $(RESOURCE_GROUP) --cluster-name $(CLUSTER_NAME) -n nodepool2 --enable-node-public-ip
 	$(MAKE) kubeconfig
 	kubectl cluster-info
 	kubectl get nodes -o wide
@@ -48,10 +49,14 @@ deploy-aspnetapp: ## Deploy aspnetapp to AKS
 
 test-aks:
 	@echo $(shell az aks show --name $(CLUSTER_NAME) -g $(RESOURCE_GROUP) --query provisioningState -o tsv)
+	# list all nodes and their ips
+
 
 test: ## Test aspnetapp
 	curl -k -H "Host: aspnetapp.$(NAME)" \
-		https://$(shell kubectl -n aspnetapp get ing aspnetapp -o jsonpath='{.status.loadBalancer.ingress[0].ip}')/healthz
+		https://$(shell kubectl -n aspnetapp get ing aspnetapp -o jsonpath='{.status.loadBalancer.ingress[0].ip}')/environment
+	#curl --cacert <(kubectl -n cert-manager get secret test-ca-secret -o jsonpath='{.data.ca\.crt}' | base64 -d) https://echo.info/environment
+
 
 clean: aks-stop ## Delete AKS cluster and resource group
 	az group delete --name $(RESOURCE_GROUP) --yes --no-wait

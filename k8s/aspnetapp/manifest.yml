@@ -20,8 +20,6 @@ spec:
     metadata:
       labels:
         app: aspnetapp
-      annotations:
-        sidecar.opentelemetry.io/inject: "true"
     spec:
       containers:
         - name: aspnetapp
@@ -32,6 +30,8 @@ spec:
           env:
             - name: ASPNETCORE_URLS
               value: http://+:8080
+            #- name: APPLICATIONINSIGHTS_CONNECTION_STRING
+            #  value: "<Your Connection String>"
 ---
 apiVersion: v1
 kind: Service
@@ -47,16 +47,19 @@ spec:
      targetPort: 8080
   type: ClusterIP # LoadBalancer
 ---
-apiVersion: "networking.k8s.io/v1"
-kind: "Ingress"
+apiVersion: networking.k8s.io/v1
+kind: Ingress
 metadata:
   name: aspnetapp
   namespace: aspnetapp
+  annotations:
+    cert-manager.io/issuer: test-ca-issuer
+    #kubernetes.io/ingress.class: nginx
 spec:
   #tls:
-  #  hosts:
-  #    - "aspnetapp.demo"
-  #secretName: keyvault-aspnetapp-demo
+  #  - hosts:
+  #    - "aspnetapp.adtr"
+  #    secretName: aspnetapp-tls
   ingressClassName: webapprouting.kubernetes.azure.com
   rules:
     - host: "aspnetapp.adtr"

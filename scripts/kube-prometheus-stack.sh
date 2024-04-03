@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [ "$1" = "--delete" ]; then
+  helm uninstall prometheus --namespace monitoring
+  kubectl delete ns monitoring
+  exit 0
+fi
+
 # Create the namespace for monitoring
 kubectl create namespace monitoring
 
@@ -16,4 +22,4 @@ kubectl wait --for=condition=Ready pods -n monitoring
 
 kubectl -n monitoring get secret prometheus-grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
 
-echo kubectl --namespace monitoring port-forward svc/prometheus-grafana 8080:80
+echo "Usage: kubectl --namespace monitoring port-forward svc/prometheus-grafana 8080:80"

@@ -10,6 +10,7 @@ RUN dotnet publish -c Release --no-restore -o /app
 FROM mcr.microsoft.com/dotnet/aspnet:${VERSION} as final
 LABEL org.opencontainers.image.source="https://github.com/atrakic/aks-azure.git"
 EXPOSE 8080
+ENV ASPNETCORE_URLS=http://+:8080
 
 # install OpenTelemetry .NET Automatic Instrumentation
 ARG OTEL_VERSION=1.4.0

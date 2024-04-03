@@ -1,7 +1,86 @@
 #!/bin/bash
 
+if [ "$1" = "--delete" ]; then
+  kubectl delete -f https://github.com/open-telemetry/opentelemetry-operator/releases/latest/download/opentelemetry-operator.yaml
+  exit 0
+fi
+
 #helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
 #helm repo update
+#helm upgrade --install otel-operator open-telemetry/opentelemetry-operator
 
-# Single gw instance
-kubectl apply -f https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector/v0.97.0/examples/k8s/otel-config.yaml
+kubectl apply -f https://github.com/open-telemetry/opentelemetry-operator/releases/latest/download/opentelemetry-operator.yaml
+
+## Wait for the operator to be ready
+kubectl wait --for=condition=Ready pods -n opentelemetry-operator-system --all
+
+## An implementation of auto-instrumentation using the OpenTelemetry Operator
+kubectl apply -f - <<EOF
+apiVersion: opentelemetry.io/v1alpha1
+kind: OpenTelemetryCollector
+metadata:
+  name: demo
+spec:
+  config: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+    processors:
+      memory_limiter:
+        check_interval: 1s
+        limit_percentage: 75
+        spike_limit_percentage: 15
+      batch:
+        send_batch_size: 10000
+        timeout: 10s
+
+    exporters:
+      debug:
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [debug]
+        metrics:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [debug]
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [debug]
+EOF
+
+## Configure Automatic Instrumentation
+
+kubectl apply -f - <<EOF
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: demo-instrumentation
+spec:
+  exporter:
+    endpoint: http://demo-collector:4318
+  propagators:
+    - tracecontext
+    - baggage
+  sampler:
+    type: parentbased_traceidratio
+    argument: "1"
+  dotnet:
+    env:
+      # Required if endpoint is set to 4317.
+      # Dotnet autoinstrumentation uses http/proto by default
+      # See https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/blob/888e2cd216c77d12e56b54ee91dafbc4e7452a52/docs/config.md#otlp
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://demo-collector:4318
+EOF
+
+## Check the status of the OpenTelemetryCollector
+kubectl get otelinst

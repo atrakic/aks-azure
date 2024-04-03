@@ -1,11 +1,13 @@
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.HttpOverrides;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddHealthChecks();
+//builder.Services.AddOpenTelemetry().UseAzureMonitor();
 
 var app = builder.Build();
 
@@ -19,7 +21,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 // Forwarded headers are required for running behind a reverse proxy
@@ -29,7 +31,7 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 });
 
 app.UseRouting();
-app.UseAuthorization();
+//app.UseAuthorization();
 app.MapRazorPages();
 
 CancellationTokenSource cancellation = new();
@@ -43,19 +45,24 @@ app.MapGet("/Environment", () =>
     return new EnvironmentInfo();
 });
 
-// This API demonstrates how to use task cancellation
-// to support graceful container shutdown via SIGTERM.
-// The method itself is an example and not useful.
+
+app.MapGet("/otel", () =>
+{
+    app.Logger.LogInformation("otel");
+    var trace = new OpenTelemetryTrace();
+    return trace.GetTrace();
+});
+
 app.MapGet("/Delay/{value}", async (int value) =>
 {
     try
     {
+        value = value > 10000 ? 10000 : value;
         await Task.Delay(value, cancellation.Token);
     }
     catch (TaskCanceledException)
     {
     }
-
     return new Operation(value);
 });
 
