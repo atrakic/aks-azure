@@ -55,14 +55,13 @@ test-aks:
 test: ## Test aspnetapp
 	curl -k -H "Host: aspnetapp.$(NAME)" \
 		https://$(shell kubectl -n aspnetapp get ing aspnetapp -o jsonpath='{.status.loadBalancer.ingress[0].ip}')/environment
-	#curl --cacert <(kubectl -n cert-manager get secret test-ca-secret -o jsonpath='{.data.ca\.crt}' | base64 -d) https://echo.info/environment
-
+	#curl --cacert <(kubectl -n cert-manager get secret test-ca-secret -o jsonpath='{.data.ca\.crt}' | base64 -d) https://aspnetapp.$(NAME)/environment
 
 clean: aks-stop ## Delete AKS cluster and resource group
 	az group delete --name $(RESOURCE_GROUP) --yes --no-wait
 	az aks list
 	az acr list
 
-.PHONY: az-login aks-create aks-stop aks-start build deploy-aspnetapp acr-login kubeconfig install-extensions set-auth-ip clean
+.PHONY: az-login aks-create aks-stop aks-start build deploy-aspnetapp acr-login kubeconfig install-extensions set-auth-ip clean test test-aks all az-create-application-insights
 
 -include .env .include.mk

@@ -14,6 +14,13 @@ kubeconfig:
 	type -a kubectl &>/dev/null || az aks install-cli
 	az aks get-credentials --name $(CLUSTER_NAME) --overwrite-existing
 
+az-create-application-insights:
+	az monitor app-insights component create \
+		--app $(APP_INSIGHTS_NAME) \
+		--location $(AZURE_DEFAULTS_LOCATION) \
+		--resource-group $(RESOURCE_GROUP) \
+		--kind web --application-type web
+
 install-extensions:
 	az extension add --name aks-preview
 
