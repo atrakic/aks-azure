@@ -35,6 +35,9 @@ aks-create: ## Create AKS cluster
 	$(MAKE) kubeconfig
 	kubectl cluster-info
 	kubectl get nodes -o wide
+	# wait for webapprouting loadBalancer to be ready
+	#kubectl -n app-routing-system wait --for=condition=available --timeout=30s deployment/nginx
+	#kubectl -n app-routing-system rollout status deployment/nginx
 
 build: acr-login ## Build and push image to CONTAINER_REGISTRY
 	az acr build \
@@ -45,22 +48,25 @@ build: acr-login ## Build and push image to CONTAINER_REGISTRY
 
 deploy-aspnetapp: ## Deploy aspnetapp to AKS
 	kubectl apply -f $(BASEDIR)/k8s/aspnetapp/manifest.yml
-	kubectl wait --for=condition=available --timeout=600s deployment/aspnetapp
+	kubectl -n aspnetapp wait --for=condition=available --timeout=600s deployment/aspnetapp
 
 test-aks:
 	@echo $(shell az aks show --name $(CLUSTER_NAME) -g $(RESOURCE_GROUP) --query provisioningState -o tsv)
-	# list all nodes and their ips
 
-
+LB_IP=$(shell kubectl -n app-routing-system get svc nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 test: ## Test aspnetapp
 	curl -k -H "Host: aspnetapp.$(NAME)" \
-		https://$(shell kubectl -n aspnetapp get ing aspnetapp -o jsonpath='{.status.loadBalancer.ingress[0].ip}')/environment
-	#curl --cacert <(kubectl -n cert-manager get secret test-ca-secret -o jsonpath='{.data.ca\.crt}' | base64 -d) https://aspnetapp.$(NAME)/environment
+		https://$(LB_IP)/environment
+
+CA-CRT=$(shell kubectl -n cert-manager get secret test-ca-secret -o jsonpath='{.data.ca\.crt}' | base64 -d)
+test-ca-certificate: # Test with custom CA certificate
+	curl -v --cacert <<<$(shell"$(CA-CRT)") -H "Host: aspnetapp.$(NAME)" https://$(LB_IP)/environment
 
 clean: aks-stop ## Delete AKS cluster and resource group
 	az group delete --name $(RESOURCE_GROUP) --yes --no-wait
 	az aks list
 	az acr list
+	make -f $(BASEDIR)/src/Makefile clean
 
 .PHONY: az-login aks-create aks-stop aks-start build deploy-aspnetapp acr-login kubeconfig install-extensions set-auth-ip clean test test-aks all az-create-application-insights
 

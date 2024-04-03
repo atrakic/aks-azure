@@ -1,14 +1,13 @@
 aks-stop:
-	az aks delete --name $(CLUSTER_NAME) --resource-group $(RESOURCE_GROUP) ## --yes --no-wait
+	az aks stop --name $(CLUSTER_NAME) --resource-group $(RESOURCE_GROUP)
 
 aks-start:
 	az aks start --name $(CLUSTER_NAME)
+	az aks check-acr --name $(CLUSTER_NAME) --acr $(CONTAINER_REGISTRY).azurecr.io
 
 acr-login:
 	az acr login --name $(CONTAINER_REGISTRY)
-  #az acr check-health -n $(CONTAINER_REGISTRY) --yes
-  #az aks check-acr --name $(CLUSTER_NAME) --acr $(CONTAINER_REGISTRY).azurecr.io
-  #az acr repository list --name $(CONTAINER_REGISTRY)
+  	#az acr check-health -n $(CONTAINER_REGISTRY) --yes
 
 kubeconfig:
 	type -a kubectl &>/dev/null || az aks install-cli

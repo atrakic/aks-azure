@@ -1,5 +1,10 @@
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
 services:
-  # installs OpenTelemetry .NET Automatic Instrumentation
   app:
     build:
       context: ./aspnetapp
@@ -14,6 +19,16 @@ services:
       - "5000:5000"
     depends_on:
       - otel-collector
+    logging: *logging
+
+  traffic-generator:
+    image: curlimages/curl:latest
+    container_name: traffic-generator
+    command: [ "sh", "-c", "while true; do curl -sL http://app:5000/otel; echo; sleep 3; done"]
+    depends_on:
+      app:
+        condition: service_started
+    logging: *logging
 
   otel-collector:
     image: otel/opentelemetry-collector:0.88.0
@@ -32,14 +47,20 @@ services:
       - jaeger
       - prometheus
       - loki
+    logging: *logging
 
   prometheus:
-    image: prom/prometheus:v2.42.0
+    image: prom/prometheus:latest
     container_name: prometheus
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+    logging: *logging
 
   jaeger:
     image: jaegertracing/all-in-one:1.50.0
@@ -52,6 +73,7 @@ services:
       resources:
         limits:
           memory: 400M
+    logging: *logging
 
   loki:
     image: grafana/loki:2.7.4
@@ -60,7 +82,7 @@ services:
       - "3100:3100"
 
   grafana:
-    image: grafana/grafana:9.4.3
+    image: grafana/grafana:10.4.1
     container_name: grafana
     volumes:
       - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
@@ -72,3 +94,8 @@ services:
       GF_AUTH_DISABLE_LOGIN_FORM: "true"
     ports:
       - "3000:3000"
+    deploy:
+      resources:
+        limits:
+          memory: 100M
+    logging: *logging

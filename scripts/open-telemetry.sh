@@ -1,15 +1,15 @@
 #!/bin/bash
 
 if [ "$1" = "--delete" ]; then
-  kubectl delete -f https://github.com/open-telemetry/opentelemetry-operator/releases/latest/download/opentelemetry-operator.yaml
+  helm uninstall otel-operator --namespace opentelemetry-operator-system
   exit 0
 fi
 
-#helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
-#helm repo update
-#helm upgrade --install otel-operator open-telemetry/opentelemetry-operator
-
-kubectl apply -f https://github.com/open-telemetry/opentelemetry-operator/releases/latest/download/opentelemetry-operator.yaml
+helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+helm repo update
+helm upgrade --install otel-operator open-telemetry/opentelemetry-operator \
+  --namespace opentelemetry-operator-system \
+  --create-namespace # --version 0.52.4
 
 ## Wait for the operator to be ready
 kubectl wait --for=condition=Ready pods -n opentelemetry-operator-system --all
@@ -19,7 +19,7 @@ kubectl apply -f - <<EOF
 apiVersion: opentelemetry.io/v1alpha1
 kind: OpenTelemetryCollector
 metadata:
-  name: demo
+  name: otel-collector
 spec:
   config: |
     receivers:
@@ -63,10 +63,10 @@ kubectl apply -f - <<EOF
 apiVersion: opentelemetry.io/v1alpha1
 kind: Instrumentation
 metadata:
-  name: demo-instrumentation
+  name: otel-instrumentation
 spec:
   exporter:
-    endpoint: http://demo-collector:4318
+    endpoint: http://otel-collector:4318
   propagators:
     - tracecontext
     - baggage
@@ -79,7 +79,7 @@ spec:
       # Dotnet autoinstrumentation uses http/proto by default
       # See https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/blob/888e2cd216c77d12e56b54ee91dafbc4e7452a52/docs/config.md#otlp
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://demo-collector:4318
+        value: http://otel-collector:4318
 EOF
 
 ## Check the status of the OpenTelemetryCollector

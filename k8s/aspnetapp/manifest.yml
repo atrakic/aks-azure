@@ -24,7 +24,7 @@ spec:
       containers:
         - name: aspnetapp
           image: acradtr.azurecr.io/aspnetapp:latest
-          imagePullPolicy: Always
+          imagePullPolicy: Always # IfNotPresent
           ports:
             - containerPort: 8080
           env:
