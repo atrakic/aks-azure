@@ -2,20 +2,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: demo
+  name: aspnetapp
 spec:
   selector:
     matchLabels:
-      app: demo
+      app: aspnetapp
   replicas: 1
   template:
     metadata:
       labels:
-        app: demo
+        app: aspnetapp
     spec:
       containers:
-        - name: demo
-          image: acradtrdemo.azurecr.io/demo/my-app:latest
+        - name: aspnetapp
+          image: acradtr.azurecr.io/aspnetapp:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -26,10 +26,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: demo
+  name: aspnetapp
 spec:
   selector:
-    app: demo
+    app: aspnetapp
   ports:
    - protocol: "TCP"
      port: 8080
@@ -39,21 +39,21 @@ spec:
 apiVersion: "networking.k8s.io/v1"
 kind: "Ingress"
 metadata:
-  name: "demo"
+  name: "aspnetapp"
 spec:
   #tls:
   #  hosts:
-  #    - "demo.adtr"
-  #secretName: keyvault-demo-adtr
+  #    - "aspnetapp.demo"
+  #secretName: keyvault-aspnetapp-demo
   ingressClassName: webapprouting.kubernetes.azure.com
   rules:
-    - host: "demo.adtr"
+    - host: "aspnetapp.adtr"
       http:
         paths:
         - path: "/"
           pathType: "Prefix"
           backend:
             service:
-              name: "demo"
+              name: "aspnetapp"
               port:
                 number: 8080

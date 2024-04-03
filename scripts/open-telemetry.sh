@@ -1,6 +1,8 @@
 #!/bin/bash
 
-helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
-helm repo update
+#helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+#helm repo update
 
-helm install my-otel-demo open-telemetry/opentelemetry-demo --values ${BASEDIR}/monitoring/values.yaml
+# Single gw instance
+kubectl apply -f https://raw.githubusercontent.com/open-telemetry/opentelemetry-collector/v0.97.0/examples/k8s/otel-config.yaml
+

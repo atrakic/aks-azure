@@ -4,6 +4,5 @@ WORKDIR /home/
 
 COPY . .
 
-ENV DEBIAN_FRONTEND=noninteractive 
+ENV DEBIAN_FRONTEND=noninteractive
 RUN bash ./setup.sh
-#RUN echo '\n' >> "$HOME/.zshrc"

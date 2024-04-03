@@ -9,6 +9,8 @@ RUN configure.py
 
 
 FROM nginx as final
+LABEL org.opencontainers.image.source="https://github.com/atrakic/aks-azure.git"
+
 ARG APP_VERSION=0.1.0
 ENV APP_VERSION=$APP_VERSION
 

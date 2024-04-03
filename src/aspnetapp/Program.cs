@@ -49,7 +49,7 @@ app.UseAuthorization();
 app.MapRazorPages();
 
 CancellationTokenSource cancellation = new();
-app.Lifetime.ApplicationStopping.Register( () =>
+app.Lifetime.ApplicationStopping.Register(() =>
 {
     cancellation.Cancel();
 });
@@ -68,7 +68,7 @@ app.MapGet("/Delay/{value}", async (int value) =>
     {
         await Task.Delay(value, cancellation.Token);
     }
-    catch(TaskCanceledException)
+    catch (TaskCanceledException)
     {
     }
 

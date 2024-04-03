@@ -13,7 +13,7 @@
       "path": "/usr/bin/dotnet"
     },
     {
-        "extensionId": "msazurermtools.azurerm-vscode-tools", 
+        "extensionId": "msazurermtools.azurerm-vscode-tools",
         "path": "/usr/bin/dotnet"
     }
   ]

@@ -1,7 +1,7 @@
 services:
   app:
     build:
-      context: .
+      context: ./aspnetapp
     container_name: app
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
