@@ -1,4 +1,5 @@
 services:
+  # installs OpenTelemetry .NET Automatic Instrumentation
   app:
     build:
       context: ./aspnetapp
@@ -6,16 +7,29 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
+      # Enable OpenTelemetry .NET Automatic Instrumentation
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=aspnetapp
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=aspnetapp,service.namespace=default
+      - OTEL_DOTNET_AUTO_LOGS_CONSOLE_EXPORTER_ENABLED=true
+      - OTEL_DOTNET_TRACER_INSTRUMENTATION_SQLCLIENT_ENABLED=true
+      - OTEL_DOTNET_TRACER_INSTRUMENTATION_EFCORE_ENABLED=true
+      - OTEL_DOTNET_AUTO_METRICS_CONSOLE_EXPORTER_ENABLED=true
+      - OTEL_DOTNET_AUTO_TRACES_CONSOLE_EXPORTER_ENABLED=true
     ports:
       - 8080:8080
 
   otel-collector:
-    image: otel/opentelemetry-collector:0.33.0
+    image: otel/opentelemetry-collector:0.88.0
     container_name: otel-collector
+    command: [ "--config=/etc/otel-collector-config.yaml" ]
     volumes:
-      - ./collector-config.yaml:/etc/otel-collector/collector-config.yaml
+      - ./collector-config.yaml:/etc/otel-collector-config.yaml
     ports:
-      - 4317:4317
-      - 55678:55678
+      - 8888:8888 # Prometheus metrics exposed by the Collector
+      - 4317:4317 # OpenTelemetry gRPC receiver
+      - 55678:55678 #
+    #environment:
+    #  - JAEGER_ENDPOINT="jaeger:4317"
     depends_on:
       - app

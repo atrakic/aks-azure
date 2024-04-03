@@ -1,8 +1,16 @@
 ---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aspnetapp
+  annotations:
+    instrumentation.opentelemetry.io/inject-dotnet: "true"
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: aspnetapp
+  namespace: aspnetapp
 spec:
   selector:
     matchLabels:
@@ -12,6 +20,8 @@ spec:
     metadata:
       labels:
         app: aspnetapp
+      annotations:
+        sidecar.opentelemetry.io/inject: "true"
     spec:
       containers:
         - name: aspnetapp
@@ -27,6 +37,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: aspnetapp
+  namespace: aspnetapp
 spec:
   selector:
     app: aspnetapp
@@ -39,7 +50,8 @@ spec:
 apiVersion: "networking.k8s.io/v1"
 kind: "Ingress"
 metadata:
-  name: "aspnetapp"
+  name: aspnetapp
+  namespace: aspnetapp
 spec:
   #tls:
   #  hosts:

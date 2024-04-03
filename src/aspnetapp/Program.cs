@@ -7,20 +7,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorPages();
 builder.Services.AddHealthChecks();
 
-/**
-builder.Services.AddOpenTelemetryTracing(builder =>
-{
-    builder.AddAspNetCoreInstrumentation()
-           .AddHttpClientInstrumentation()
-           .AddJaegerExporter();
-});
-*/
-
-// builder.Services.ConfigureHttpJsonOptions(options =>
-// {
-//     options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonSerializerContext.Default);
-// });
-
 var app = builder.Build();
 
 app.MapHealthChecks("/healthz");
@@ -43,9 +29,7 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 });
 
 app.UseRouting();
-
 app.UseAuthorization();
-
 app.MapRazorPages();
 
 CancellationTokenSource cancellation = new();

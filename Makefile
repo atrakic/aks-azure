@@ -51,7 +51,7 @@ test-aks:
 
 test: ## Test aspnetapp
 	curl -k -H "Host: aspnetapp.$(NAME)" \
-		https://$(shell kubectl get ing aspnetapp -o jsonpath='{.status.loadBalancer.ingress[0].ip}')/healthz
+		https://$(shell kubectl -n aspnetapp get ing aspnetapp -o jsonpath='{.status.loadBalancer.ingress[0].ip}')/healthz
 
 clean: aks-stop ## Delete AKS cluster and resource group
 	az group delete --name $(RESOURCE_GROUP) --yes --no-wait
