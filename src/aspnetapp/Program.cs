@@ -1,15 +1,22 @@
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.HttpOverrides;
 
+using System.Globalization;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddHealthChecks();
-//builder.Services.AddOpenTelemetry().UseAzureMonitor();
 
 var app = builder.Build();
+var logger = app.Logger;
+
+//app.UseAuthorization();
+//app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+app.MapRazorPages();
 
 app.MapHealthChecks("/healthz");
 
@@ -21,57 +28,32 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-//app.UseHttpsRedirection();
-app.UseStaticFiles();
-
 // Forwarded headers are required for running behind a reverse proxy
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
 
-app.UseRouting();
-//app.UseAuthorization();
-app.MapRazorPages();
-
-CancellationTokenSource cancellation = new();
-app.Lifetime.ApplicationStopping.Register(() =>
-{
-    cancellation.Cancel();
-});
-
 app.MapGet("/Environment", () =>
 {
+    logger.LogInformation("Environment");
     return new EnvironmentInfo();
 });
 
-
-app.MapGet("/otel", () =>
+app.MapGet("/rolldice/{player?}", (string? player) =>
 {
-    app.Logger.LogInformation("otel");
-    var trace = new OpenTelemetryTrace();
-    return trace.GetTrace();
-});
+    var result = Random.Shared.Next(1, 7);
+    var message = string.IsNullOrEmpty(player)
+        ? $"Anonymous player is rolling the dice: {result}"
+        : $"{player} is rolling the dice: {result}";
 
-app.MapGet("/Delay/{value}", async (int value) =>
-{
-    try
-    {
-        value = value > 10000 ? 10000 : value;
-        await Task.Delay(value, cancellation.Token);
-    }
-    catch (TaskCanceledException)
-    {
-    }
-    return new Operation(value);
+    logger.LogInformation(message);
+    return result.ToString(CultureInfo.InvariantCulture);
 });
 
 app.Run();
 
 [JsonSerializable(typeof(EnvironmentInfo))]
-[JsonSerializable(typeof(Operation))]
 internal partial class AppJsonSerializerContext : JsonSerializerContext
 {
 }
-
-public record struct Operation(int Delay);

@@ -12,103 +12,43 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=5000
-      # Enable OpenTelemetry .NET Automatic Instrumentation
-      - OTEL_SERVICE_NAME="aspnetapp"
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      # automatic instrumentation for .NET (beta)
+      - OTEL_SERVICE_NAME=aspnetapp
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+      - OTEL_LOG_LEVEL=debug
     ports:
       - "5000:5000"
     depends_on:
-      - otel-collector
+      - jaeger
     logging: *logging
 
   traffic-generator:
-    image: curlimages/curl:latest
+    image: curlimages/curl:${CURL_VERSION:-latest}
     container_name: traffic-generator
     command:
       [
         "sh",
         "-c",
-        "while true; do curl -sL http://app:5000/otel; echo; sleep 3; done"
+        "while true; do curl -sL http://app:5000/rolldice; echo; sleep 3; done"
       ]
     depends_on:
       app:
         condition: service_started
     logging: *logging
 
-  otel-collector:
-    #image: otel/opentelemetry-collector:0.88.0
-    image: otel/opentelemetry-collector-contrib:0.97.0
-    container_name: otel-collector
-    command: --config /etc/otel/config.yaml
-    volumes:
-      - ./collector-config.yaml:/etc/otel/config.yaml
-    ports:
-      - 1888:1888 # pprof extension
-      - 8888:8888 # Prometheus metrics exposed by the Collector
-      - 8889:8889 # Prometheus exporter metrics (scrape endpoint)
-      - 13133:13133 # health_check extension
-      - 4317:4317 # OTLP gRPC receiver
-      - 4318:4318 # OTLP http receiver
-      - 55679:55679 # zpages extension
-    environment:
-      - PROMETHEUS_ENDPOINT="0.0.0.0:8889"
-      #- PROMETHEUS_ENDPOINT="http://prometheus:9090/api/v1/otlp"
-      - LOKI_ENDPOINT="http://loki:3100/loki/api/v1/push"
-      - JAEGER_ENDPOINT="jaeger:4317"
-    depends_on:
-      - jaeger
-      - prometheus
-      - loki
-    logging: *logging
-
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-    ports:
-      - "9090:9090"
-    deploy:
-      resources:
-        limits:
-          memory: 300M
-    logging: *logging
-
   jaeger:
-    image: jaegertracing/all-in-one:1.50.0
+    image: jaegertracing/all-in-one:${JAEGER_VERSION:-latest}
     container_name: jaeger
     command:
       - "--memory.max-traces=5000"
     ports:
       - "16686:16686" # Jaeger Web UI
+      - "4317:4317" # Jaeger Collector
+      - "4318:4318" # Jaeger Collector HTTP
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
     deploy:
       resources:
         limits:
           memory: 400M
-    logging: *logging
-
-  loki:
-    image: grafana/loki:2.7.4
-    container_name: loki
-    ports:
-      - "3100:3100"
-    logging: *logging
-
-  grafana:
-    image: grafana/grafana:10.4.1
-    container_name: grafana
-    volumes:
-      - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
-    environment:
-      GF_SECURITY_DISABLE_INITIAL_ADMIN_CREATION: "true"
-      GF_AUTH_ANONYMOUS_ENABLED: "true"
-      GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
-      GF_AUTH_DISABLE_SIGNOUT_MENU: "true"
-      GF_AUTH_DISABLE_LOGIN_FORM: "true"
-    ports:
-      - "3000:3000"
-    deploy:
-      resources:
-        limits:
-          memory: 100M
     logging: *logging

@@ -11,6 +11,9 @@
 
   <ItemGroup>
     <!--
+      manual instrumentation:
+      https://opentelemetry.io/docs/languages/net/getting-started/#instrumentation
+      <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.8.0" />
       <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.8.0" />
       <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.7.1" />
     -->
