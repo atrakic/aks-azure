@@ -24,6 +24,43 @@ spec:
       containers:
         - name: aspnetapp
           image: acradtr.azurecr.io/aspnetapp:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_URLS
+              value: http://+:8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 20
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aspnetapp
+  namespace: aspnetapp
+spec:
+  selector:
+    matchLabels:
+      app: aspnetapp
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: aspnetapp
+    spec:
+      containers:
+        - name: aspnetapp
+          image: acradtr.azurecr.io/aspnetapp:latest
           imagePullPolicy: Always # IfNotPresent
           ports:
             - containerPort: 8080
