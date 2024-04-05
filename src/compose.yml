@@ -8,34 +8,49 @@ services:
   app:
     build:
       context: ./aspnetapp
+      args:
+        - DOTNET_VERSION=${DOTNET_VERSION:-8.0}
     container_name: app
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=5000
       # automatic instrumentation for .NET (beta)
       - OTEL_SERVICE_NAME=aspnetapp
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
-      - OTEL_LOG_LEVEL=debug
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel:4317
+      #- OTEL_LOG_LEVEL=debug
     ports:
       - "5000:5000"
     depends_on:
+      - otel
       - jaeger
     logging: *logging
-
-  traffic-generator:
+  client:
     image: curlimages/curl:${CURL_VERSION:-latest}
-    container_name: traffic-generator
+    container_name: client
     command:
       [
         "sh",
         "-c",
-        "while true; do curl -sL http://app:5000/rolldice; echo; sleep 3; done"
+        "while true; do curl 'User-Agent: client-$${AGENT}' -sL http://app:5000/environment/$${GIT_COMMIT}; echo; sleep 3; done"
       ]
+    environment:
+      - AGENT=${AGENT:-unknown}
+      - GIT_COMMIT=${GIT_COMMIT:-unspecified}
     depends_on:
       app:
         condition: service_started
     logging: *logging
 
+  # monitoring infrastructure
+  otel:
+    image: otel/opentelemetry-collector:${OTEL_VERSION:-latest}
+    command: --config otel-config.yaml
+    container_name: otel
+    ports:
+      - "4317:4317"
+    volumes:
+      - ${PWD}/otel-config.yaml:/otel-config.yaml
+    logging: *logging
   jaeger:
     image: jaegertracing/all-in-one:${JAEGER_VERSION:-latest}
     container_name: jaeger
@@ -43,10 +58,18 @@ services:
       - "--memory.max-traces=5000"
     ports:
       - "16686:16686" # Jaeger Web UI
-      - "4317:4317" # Jaeger Collector
-      - "4318:4318" # Jaeger Collector HTTP
+      - "5775:5775/udp"
+      - "6831:6831/udp"
+      - "6832:6832/udp"
+      - "5778:5778"
+      - "14268:14268"
+      - "14250:14250"
+      - "9411:9411"
+      #- "4317:4317" # Jaeger Collector
+      #- "4318:4318" # Jaeger Collector HTTP
     environment:
-      - COLLECTOR_OTLP_ENABLED=true
+       - LOG_LEVEL=debug
+    #  - COLLECTOR_OTLP_ENABLED=true
     deploy:
       resources:
         limits:

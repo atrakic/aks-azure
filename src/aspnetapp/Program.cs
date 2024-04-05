@@ -1,13 +1,56 @@
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.HttpOverrides;
 
-using System.Globalization;
+using Microsoft.Extensions.DependencyInjection;
+using OpenTelemetry.Instrumentation.AspNetCore;
+using System.Diagnostics.Metrics;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+
+// Configure OpenTelemetry tracing & metrics with auto-start using the
+// AddOpenTelemetry extension from OpenTelemetry.Extensions.Hosting.
+var otelExporterOtlpEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT");
+if (!string.IsNullOrEmpty(otelExporterOtlpEndpoint))
+{
+    var serviceName = Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME") ?? "aspnetapp";
+
+    builder.Logging.AddOpenTelemetry(options =>
+    {
+        options.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))
+        .AddConsoleExporter();
+    });
+
+    builder.Services.AddOpenTelemetry()
+        .ConfigureResource(resource => resource.AddService(serviceName))
+
+        .WithTracing(tracing => tracing
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddAspNetCoreInstrumentation()
+            // https://github.com/open-telemetry/opentelemetry-dotnet/issues/3753
+            //.AddOtlpExporter(exporter => exporter.Endpoint = new Uri(otelExporterOtlpEndpoint))
+            .AddConsoleExporter())
+
+        .WithMetrics(metrics => metrics
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddAspNetCoreInstrumentation()
+            //.AddOtlpExporter(exporter => exporter.Endpoint = new Uri(otelExporterOtlpEndpoint))
+            .AddConsoleExporter()
+    );
+}
+
 builder.Services.AddRazorPages();
 builder.Services.AddHealthChecks();
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 var logger = app.Logger;
@@ -17,7 +60,6 @@ var logger = app.Logger;
 app.UseStaticFiles();
 app.UseRouting();
 app.MapRazorPages();
-
 app.MapHealthChecks("/healthz");
 
 // Configure the HTTP request pipeline.
@@ -34,26 +76,45 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
 
-app.MapGet("/Environment", () =>
+app.MapGet("/Environment/{user?}", (string? user) =>
 {
-    logger.LogInformation("Environment");
+    logger.LogInformation(string.IsNullOrEmpty(user) ?
+      "Anonymous env" :
+      "Environment for {user}", user);
     return new EnvironmentInfo();
 });
 
-app.MapGet("/rolldice/{player?}", (string? player) =>
+app.MapGet("/otel", () =>
 {
-    var result = Random.Shared.Next(1, 7);
-    var message = string.IsNullOrEmpty(player)
-        ? $"Anonymous player is rolling the dice: {result}"
-        : $"{player} is rolling the dice: {result}";
+    logger.LogInformation("otel");
+    var trace = new OpenTelemetryTrace();
+    return trace.GetTrace();
+});
 
-    logger.LogInformation(message);
-    return result.ToString(CultureInfo.InvariantCulture);
+CancellationTokenSource cancellation = new();
+app.Lifetime.ApplicationStopping.Register(() =>
+{
+    cancellation.Cancel();
+});
+
+app.MapGet("/Delay/{value}", async (int value) =>
+{
+    try
+    {
+        value = value > 10000 ? 10000 : value;
+        await Task.Delay(value, cancellation.Token);
+    }
+    catch (TaskCanceledException)
+    {
+    }
+    return new Operation(value);
 });
 
 app.Run();
 
 [JsonSerializable(typeof(EnvironmentInfo))]
+[JsonSerializable(typeof(Operation))]
 internal partial class AppJsonSerializerContext : JsonSerializerContext
 {
 }
+public record struct Operation(int Delay);
