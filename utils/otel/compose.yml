@@ -29,11 +29,11 @@ services:
       [
         "sh",
         "-c",
-        "while true; do curl -H 'X-Trace-ID: $${ID}' -sL http://app:5000/sleep; echo;done"
+        "while true; do curl -H 'X-Trace-ID: $${ID}' -sL http://app:5000/api/Sleep?milliseconds=$${RANDOM};echo; done"
       ]
     environment:
       - ID=${ID:-}
-      - WHOAMI=${WHOAMI:-}
+      - RANDOM=${RANDOM:-}
     depends_on:
       app:
         condition: service_started
