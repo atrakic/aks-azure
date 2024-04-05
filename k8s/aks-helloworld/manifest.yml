@@ -32,7 +32,7 @@ spec:
       containers:
         - name: aks-helloworld
           #image: mcr.microsoft.com/azuredocs/aks-helloworld:v1
-          image: nginx:lastest
+          image: nginx:latest
           ports:
             - containerPort: 80
           volumeMounts:
