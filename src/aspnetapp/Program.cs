@@ -49,6 +49,8 @@ if (!string.IsNullOrEmpty(otelExporterOtlpEndpoint))
 builder.Services.AddRazorPages();
 builder.Services.AddHealthChecks();
 builder.Services.AddControllers();
+
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -61,6 +63,7 @@ app.UseStaticFiles();
 app.UseRouting();
 app.MapRazorPages();
 app.MapHealthChecks("/healthz");
+app.MapControllers();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -68,6 +71,12 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Error");
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
+}
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 // Forwarded headers are required for running behind a reverse proxy
@@ -79,8 +88,8 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 app.MapGet("/Environment/{user?}", (string? user) =>
 {
     logger.LogInformation(string.IsNullOrEmpty(user) ?
-      "Anonymous env" :
-      "Environment for {user}", user);
+      "Anonymous environment request" :
+      "Environment for user {user}", user);
     return new EnvironmentInfo();
 });
 
@@ -97,11 +106,13 @@ app.Lifetime.ApplicationStopping.Register(() =>
     cancellation.Cancel();
 });
 
-app.MapGet("/Delay/{value}", async (int value) =>
+app.MapPost("/delay/{value}", async (int value) =>
 {
+    const int maxDelay = 1000;
     try
     {
-        value = value > 10000 ? 10000 : value;
+        value = value > maxDelay ? maxDelay : value;
+        logger.LogInformation("Delay: {value}", value);
         await Task.Delay(value, cancellation.Token);
     }
     catch (TaskCanceledException)
@@ -117,4 +128,5 @@ app.Run();
 internal partial class AppJsonSerializerContext : JsonSerializerContext
 {
 }
+
 public record struct Operation(int Delay);

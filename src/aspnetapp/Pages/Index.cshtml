@@ -4,7 +4,7 @@
 @using System.IO
 @using System.Diagnostics
 @{
-    ViewData["Title"] = "Welcome to .NET";
+    ViewData["Title"] = ".NET";
     string hostName = System.Net.Dns.GetHostName();
     var ipList = await System.Net.Dns.GetHostAddressesAsync(hostName);
     EnvironmentInfo env = new();
@@ -13,7 +13,7 @@
 }
 
 <div class="text-center">
-    <h1>Welcome to .NET</h1>
+    <h1>.NET</h1>
 </div>
 
 <div align="center">

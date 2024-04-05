@@ -14,7 +14,6 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=5000
-      # automatic instrumentation for .NET (beta)
       - OTEL_SERVICE_NAME=aspnetapp
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel:4317
       #- OTEL_LOG_LEVEL=debug
@@ -31,17 +30,17 @@ services:
       [
         "sh",
         "-c",
-        "while true; do curl 'User-Agent: client-$${AGENT}' -sL http://app:5000/environment/$${GIT_COMMIT}; echo; sleep 3; done"
+        "while true; do curl 'X-Trace-ID: $${ID}' -sL http://app:5000/environment/$${WHOAMI}; echo; sleep 3; done"
       ]
     environment:
-      - AGENT=${AGENT:-unknown}
-      - GIT_COMMIT=${GIT_COMMIT:-unspecified}
+      - ID=${ID:-}
+      - WHOAMI=${WHOAMI:-}
     depends_on:
       app:
         condition: service_started
     logging: *logging
 
-  # monitoring infrastructure
+  # Monitoring infrastructure
   otel:
     image: otel/opentelemetry-collector:${OTEL_VERSION:-latest}
     command: --config otel-config.yaml
