@@ -7,7 +7,7 @@ x-default-logging: &logging
 services:
   app:
     build:
-      context: ./aspnetapp
+      context: ../../src/aspnetapp
       args:
         - DOTNET_VERSION=${DOTNET_VERSION:-8.0}
     container_name: app
@@ -15,12 +15,11 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=5000
       - OTEL_SERVICE_NAME=aspnetapp
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
       #- OTEL_LOG_LEVEL=debug
     ports:
       - "5000:5000"
     depends_on:
-      - otel
       - jaeger
     logging: *logging
   client:
@@ -30,7 +29,7 @@ services:
       [
         "sh",
         "-c",
-        "while true; do curl 'X-Trace-ID: $${ID}' -sL http://app:5000/environment/$${WHOAMI}; echo; sleep 3; done"
+        "while true; do curl -H 'X-Trace-ID: $${ID}' -sL http://app:5000/sleep; echo;done"
       ]
     environment:
       - ID=${ID:-}
@@ -38,17 +37,6 @@ services:
     depends_on:
       app:
         condition: service_started
-    logging: *logging
-
-  # Monitoring infrastructure
-  otel:
-    image: otel/opentelemetry-collector:${OTEL_VERSION:-latest}
-    command: --config otel-config.yaml
-    container_name: otel
-    ports:
-      - "4317:4317"
-    volumes:
-      - ${PWD}/otel-config.yaml:/otel-config.yaml
     logging: *logging
   jaeger:
     image: jaegertracing/all-in-one:${JAEGER_VERSION:-latest}
@@ -67,8 +55,7 @@ services:
       #- "4317:4317" # Jaeger Collector
       #- "4318:4318" # Jaeger Collector HTTP
     environment:
-       - LOG_LEVEL=debug
-    #  - COLLECTOR_OTLP_ENABLED=true
+      - COLLECTOR_OTLP_ENABLED=true
     deploy:
       resources:
         limits:

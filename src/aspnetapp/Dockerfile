@@ -9,6 +9,7 @@ RUN dotnet publish -c Release --no-restore -o /app
 
 FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION} as final
 LABEL org.opencontainers.image.source="https://github.com/atrakic/aks-azure.git"
+
 EXPOSE 5000
 ENV ASPNETCORE_URLS=http://+:5000
 

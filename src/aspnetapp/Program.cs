@@ -3,22 +3,29 @@ using Microsoft.AspNetCore.HttpOverrides;
 
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Instrumentation.AspNetCore;
-using System.Diagnostics.Metrics;
+using System.Diagnostics;
+
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
+using aspnetapp.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
+// Create a service to expose ActivitySource, and Metric Instruments
+// for manual instrumentation
+builder.Services.AddSingleton<Instrumentation>();
 
+// https://github.com/open-telemetry/opentelemetry-dotnet/blob/main/src/OpenTelemetry.Exporter.OpenTelemetryProtocol/README.md
 // Configure OpenTelemetry tracing & metrics with auto-start using the
 // AddOpenTelemetry extension from OpenTelemetry.Extensions.Hosting.
 var otelExporterOtlpEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT");
 if (!string.IsNullOrEmpty(otelExporterOtlpEndpoint))
 {
-    var serviceName = Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME") ?? "aspnetapp";
+    var serviceName = Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME") ?? builder.Environment.ApplicationName;
 
     builder.Logging.AddOpenTelemetry(options =>
     {
@@ -33,15 +40,14 @@ if (!string.IsNullOrEmpty(otelExporterOtlpEndpoint))
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
             .AddAspNetCoreInstrumentation()
-            // https://github.com/open-telemetry/opentelemetry-dotnet/issues/3753
-            //.AddOtlpExporter(exporter => exporter.Endpoint = new Uri(otelExporterOtlpEndpoint))
+            .AddOtlpExporter(exporter => exporter.Endpoint = new Uri(otelExporterOtlpEndpoint))
             .AddConsoleExporter())
 
         .WithMetrics(metrics => metrics
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
             .AddAspNetCoreInstrumentation()
-            //.AddOtlpExporter(exporter => exporter.Endpoint = new Uri(otelExporterOtlpEndpoint))
+            .AddOtlpExporter(exporter => exporter.Endpoint = new Uri(otelExporterOtlpEndpoint))
             .AddConsoleExporter()
     );
 }
@@ -85,6 +91,10 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
 
+// --- OpenTelemetry endpoint ---
+app.MapGet("/otel", () => $"OpenTelemetry Trace: {Activity.Current?.Id}");
+
+// --- Environment endpoint ---
 app.MapGet("/Environment/{user?}", (string? user) =>
 {
     logger.LogInformation(string.IsNullOrEmpty(user) ?
@@ -93,40 +103,9 @@ app.MapGet("/Environment/{user?}", (string? user) =>
     return new EnvironmentInfo();
 });
 
-app.MapGet("/otel", () =>
-{
-    logger.LogInformation("otel");
-    var trace = new OpenTelemetryTrace();
-    return trace.GetTrace();
-});
-
-CancellationTokenSource cancellation = new();
-app.Lifetime.ApplicationStopping.Register(() =>
-{
-    cancellation.Cancel();
-});
-
-app.MapPost("/delay/{value}", async (int value) =>
-{
-    const int maxDelay = 1000;
-    try
-    {
-        value = value > maxDelay ? maxDelay : value;
-        logger.LogInformation("Delay: {value}", value);
-        await Task.Delay(value, cancellation.Token);
-    }
-    catch (TaskCanceledException)
-    {
-    }
-    return new Operation(value);
-});
-
 app.Run();
 
 [JsonSerializable(typeof(EnvironmentInfo))]
-[JsonSerializable(typeof(Operation))]
 internal partial class AppJsonSerializerContext : JsonSerializerContext
 {
 }
-
-public record struct Operation(int Delay);
