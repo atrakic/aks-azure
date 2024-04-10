@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Instrumentation.AspNetCore;
 using System.Diagnostics;
 
+using System.Diagnostics.Metrics;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
@@ -39,11 +40,13 @@ if (!string.IsNullOrEmpty(otelExporterOtlpEndpoint))
         .WithTracing(tracing => tracing
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
-            .AddAspNetCoreInstrumentation()
             .AddOtlpExporter(exporter => exporter.Endpoint = new Uri(otelExporterOtlpEndpoint))
             .AddConsoleExporter())
 
         .WithMetrics(metrics => metrics
+            // Ensure the MeterProvider subscribes to any custom Meters
+            .AddMeter(Instrumentation.MeterName)
+            .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
             .AddAspNetCoreInstrumentation()
