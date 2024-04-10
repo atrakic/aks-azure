@@ -48,7 +48,10 @@ if (!string.IsNullOrEmpty(otelExporterOtlpEndpoint))
             .AddHttpClientInstrumentation()
             .AddAspNetCoreInstrumentation()
             .AddOtlpExporter(exporter => exporter.Endpoint = new Uri(otelExporterOtlpEndpoint))
-            .AddConsoleExporter()
+            .AddConsoleExporter((exporterOptions, metricReaderOptions) =>
+            {
+                metricReaderOptions.PeriodicExportingMetricReaderOptions.ExportIntervalMilliseconds = 1000;
+            })
     );
 }
 
