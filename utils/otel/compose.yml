@@ -68,11 +68,11 @@ services:
       - COLLECTOR_OTLP_ENABLED=true
       - LOG_LEVEL=debug
       # Service Performance Monitoring (SPM)
-      - METRICS_STORAGE_TYPE=prometheus
-      - PROMETHEUS_SERVER_URL=http://prometheus:9090
-      - PROMETHEUS_QUERY_SUPPORT_SPANMETRICS_CONNECTOR=${PROMETHEUS_QUERY_SUPPORT_SPANMETRICS_CONNECTOR:-true}
-      - PROMETHEUS_QUERY_NORMALIZE_CALLS=true
-      - PROMETHEUS_QUERY_NORMALIZE_DURATION=true
+      #- METRICS_STORAGE_TYPE=prometheus
+      #- PROMETHEUS_SERVER_URL=http://prometheus:9090
+      #- PROMETHEUS_QUERY_SUPPORT_SPANMETRICS_CONNECTOR=${PROMETHEUS_QUERY_SUPPORT_SPANMETRICS_CONNECTOR:-true}
+      #- PROMETHEUS_QUERY_NORMALIZE_CALLS=true
+      #- PROMETHEUS_QUERY_NORMALIZE_DURATION=true
     deploy:
       resources:
         limits:
@@ -86,7 +86,8 @@ services:
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.retention.time=1h"
-      - "--enable-feature=otlp-write-receiver"
+      - "--query.lookback-delta=15s"
+      #- "--enable-feature=otlp-write-receiver"
     ports:
       - "9090:9090"
     depends_on:

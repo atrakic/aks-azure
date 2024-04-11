@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Instrumentation.AspNetCore;
 using System.Diagnostics;
 
-
 using System.Diagnostics.Metrics;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
@@ -47,10 +46,11 @@ if (!string.IsNullOrEmpty(otelExporterOtlpEndpoint))
             .AddConsoleExporter())
 
         .WithMetrics(metrics => metrics
+            .AddPrometheusExporter()
             // Ensure the MeterProvider subscribes to any custom Meters
             .AddMeter(Instrumentation.MeterName)
 
-            .AddProcessInstrumentation()
+            //.AddProcessInstrumentation() // Collects CPU and memory usage (beta)
             .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
@@ -95,6 +95,7 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
 
+app.UseOpenTelemetryPrometheusScrapingEndpoint();
 //app.UseAuthorization();
 //app.UseHttpsRedirection();
 app.UseStaticFiles();
