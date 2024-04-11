@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Instrumentation.AspNetCore;
 using System.Diagnostics;
 
+
 using System.Diagnostics.Metrics;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
@@ -28,6 +29,7 @@ if (!string.IsNullOrEmpty(otelExporterOtlpEndpoint))
 {
     var serviceName = Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME") ?? builder.Environment.ApplicationName;
 
+    builder.Logging.ClearProviders();
     builder.Logging.AddOpenTelemetry(options =>
     {
         options.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))
@@ -39,6 +41,7 @@ if (!string.IsNullOrEmpty(otelExporterOtlpEndpoint))
 
         .WithTracing(tracing => tracing
             .AddAspNetCoreInstrumentation()
+            //.SetSampler(new AlwaysOnSampler())
             .AddHttpClientInstrumentation()
             .AddOtlpExporter(exporter => exporter.Endpoint = new Uri(otelExporterOtlpEndpoint))
             .AddConsoleExporter())
@@ -46,36 +49,31 @@ if (!string.IsNullOrEmpty(otelExporterOtlpEndpoint))
         .WithMetrics(metrics => metrics
             // Ensure the MeterProvider subscribes to any custom Meters
             .AddMeter(Instrumentation.MeterName)
+
+            .AddProcessInstrumentation()
             .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
             .AddAspNetCoreInstrumentation()
-            .AddOtlpExporter(exporter => exporter.Endpoint = new Uri(otelExporterOtlpEndpoint))
-            .AddConsoleExporter((exporterOptions, metricReaderOptions) =>
+            .AddOtlpExporter((exporterOptions, metricReaderOptions) =>
             {
-                metricReaderOptions.PeriodicExportingMetricReaderOptions.ExportIntervalMilliseconds = 1000;
+                exporterOptions.Endpoint = new Uri(otelExporterOtlpEndpoint);
+                //exporterOptions.Protocol = OtlpExportProtocol.HttpProtobuf;
+                metricReaderOptions.PeriodicExportingMetricReaderOptions.ExportIntervalMilliseconds = 1000 * 2;
             })
+            .AddConsoleExporter()
     );
 }
 
 builder.Services.AddRazorPages();
 builder.Services.AddHealthChecks();
 builder.Services.AddControllers();
-
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 var logger = app.Logger;
-
-//app.UseAuthorization();
-//app.UseHttpsRedirection();
-app.UseStaticFiles();
-app.UseRouting();
-app.MapRazorPages();
-app.MapHealthChecks("/healthz");
-app.MapControllers();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -96,6 +94,14 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
+
+//app.UseAuthorization();
+//app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+app.MapRazorPages();
+app.MapHealthChecks("/healthz");
+app.MapControllers();
 
 // --- OpenTelemetry endpoint ---
 app.MapGet("/otel", () => $"OpenTelemetry Trace: {Activity.Current?.Id}");

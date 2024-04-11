@@ -4,5 +4,5 @@
 **/out/
 
 # files
-#Dockerfile*
+Dockerfile*
 **/*.md
