@@ -5,9 +5,9 @@
 
 ## Usage
 - [App](http://localhost:5000)
-- [APP - SwaggerUI](http://localhost:5000/swagger/index.html)
-- [Traces - Jaeger UI](http://localhost:16686/search)
-- [Metrics - Prometheus](http://localhost:9090)
+- [APP(SwaggerUI)](http://localhost:5000/swagger/index.html)
+- [Jaeger UI](http://localhost:16686/search)
+- [Grafana](http://localhost:3000)
 
 
 ## References
@@ -17,4 +17,3 @@
 - https://github.com/open-telemetry/opentelemetry-dotnet/blob/main/src/OpenTelemetry.Exporter.OpenTelemetryProtocol/README.md
 - https://github.com/open-telemetry/opentelemetry-dotnet/tree/main/examples/AspNetCore
 - https://github.com/grafana/docker-otel-lgtm/tree/main
-
