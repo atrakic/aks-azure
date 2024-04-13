@@ -15,20 +15,44 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=5000
-      # OpenTelemetry configuration
+      # OpenTelemetry config:
       - OTEL_SERVICE_NAME=aspnetapp
-      #- OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel_collector:4317
-      #- OTEL_LOG_LEVEL=debug
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    deploy:
+      resources:
+        limits:
+          memory: 100M
     ports:
       - "5000:5000"
     depends_on:
+      - otel-collector
       - jaeger
     logging: *logging
-  # Generates request data
-  client:
-    image: curlimages/curl:${CURL_VERSION:-latest}
+  console:
+    image: console:${DOTNET_VERSION:-8.0}
+    build:
+      context: ./Client
+      args:
+        - DOTNET_VERSION=${DOTNET_VERSION:-8.0}
+    entrypoint: "./out/Client http://app:5000/otel"
     container_name: client
+    environment:
+      # OpenTelemetry config:
+      - OTEL_SERVICE_NAME=console
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_LOG_LEVEL=debug
+    deploy:
+      resources:
+        limits:
+          memory: 100M
+    depends_on:
+      - otel-collector
+      - app
+    logging: *logging
+  # Generates request data
+  curl:
+    image: curlimages/curl:${CURL_VERSION:-latest}
+    container_name: curl
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -40,6 +64,10 @@ services:
     environment:
       - ID=${ID:-}
       - RANDOM=${RANDOM:-}
+    deploy:
+      resources:
+        limits:
+          memory: 100M
     depends_on:
       app:
         condition: service_started
@@ -51,7 +79,6 @@ services:
     container_name: jaeger
     command:
       - "--memory.max-traces=5000"
-      #- "--prometheus.query.support-spanmetrics-connector=true"
     ports:
       - "16686:16686" # Jaeger Web UI
       #- "5775:5775/udp"
@@ -66,24 +93,19 @@ services:
       - "4318:4318" # Jaeger Collector HTTP (protobuf)
     environment:
       - COLLECTOR_OTLP_ENABLED=true
-      - LOG_LEVEL=debug
       # Service Performance Monitoring (SPM)
       - METRICS_STORAGE_TYPE=prometheus
       - PROMETHEUS_SERVER_URL=http://prometheus:9090
       - PROMETHEUS_QUERY_SUPPORT_SPANMETRICS_CONNECTOR=${PROMETHEUS_QUERY_SUPPORT_SPANMETRICS_CONNECTOR:-true}
       - PROMETHEUS_QUERY_NORMALIZE_CALLS=true
       - PROMETHEUS_QUERY_NORMALIZE_DURATION=true
-    deploy:
-      resources:
-        limits:
-          memory: 400M
     logging: *logging
-  # OpenTelemetry Collector
-  otel_collector:
+  otel-collector:
     image: otel/opentelemetry-collector-contrib:${OTEL_IMAGE_TAG:-0.89.0}
     volumes:
       - ${OTEL_CONFIG_SRC:-./otel-collector-config-connector.yml}:/etc/otelcol/otel-collector-config.yml
     command: --config /etc/otelcol/otel-collector-config.yml
+    container_name: otel
     depends_on:
       - jaeger
   prometheus:
@@ -92,9 +114,6 @@ services:
     volumes:
       - ${PWD}/prometheus.yml:/etc/prometheus/prometheus.yml
     #command:
-    #  - "--config.file=/etc/prometheus/prometheus.yml"
-    #  - "--storage.tsdb.retention.time=1h"
-    #  - "--query.lookback-delta=15s"
     #  - "--enable-feature=otlp-write-receiver"
     ports:
       - "9090:9090"
