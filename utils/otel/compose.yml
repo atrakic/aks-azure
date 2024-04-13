@@ -28,10 +28,10 @@ services:
       - otel-collector
       - jaeger
     logging: *logging
-  console:
+  client:
     image: console:${DOTNET_VERSION:-8.0}
     build:
-      context: ./Client
+      context: ../../src/Http.Client
       args:
         - DOTNET_VERSION=${DOTNET_VERSION:-8.0}
     entrypoint: "./out/Client http://app:5000/otel"
