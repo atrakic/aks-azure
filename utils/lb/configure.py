@@ -24,6 +24,7 @@ def generate_nginx_config(hostnames: str = None):
     config += "\n"
     config += "    location / {\n"
     config += "        proxy_pass http://backend;\n"
+    config += "        proxy_set_header  Host $host;\n"
     config += "        proxy_set_header X-Real-IP $remote_addr;\n"
     config += "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n"
     config += "        proxy_set_header X-Forwarded-Proto $scheme;\n"
