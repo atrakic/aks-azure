@@ -3,54 +3,79 @@
 # 1. Set the following secrets in your repository (instructions for getting these can be found at https://docs.microsoft.com/en-us/azure/developer/github/connect-from-azure?tabs=azure-cli%2Clinux):
 #    - AZURE_CREDENTIALS: The Azure credentials used to log into Azure.
 
-name: Build and deploy an app to AKS
+name: Build to ACR and deploy on AKS
 
 on:
+  # Allows to manually trigger the workflow
   workflow_dispatch:
-  #push:
-  #  branches: ["main"]
+
+  # Run after the ci workflow completes
+  workflow_run:
+    workflows: ["ci"]
+    types: [completed]
 
 jobs:
-  aks-build-image:
+  build-acr-image:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     permissions:
       contents: read
       id-token: write
-    runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set common environment variables
         run: grep -v "#" ./.env >> $GITHUB_ENV
+
       - name: Azure login
-        uses: azure/login@v1.4.6
+        uses: azure/login@v2
         with:
           creds: '${{ secrets.AZURE_CREDENTIALS }}'
+
+      - name: Azure CLI script
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az account show
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Login to Azure Container Registry
         run: az acr login --name ${{ env.CONTAINER_REGISTRY }}
 
       - name: Build and push image to ACR
-        run: make build-image
+        run: make build-acr
 
-  k8s-deploy:
+  aks-deploy:
+    runs-on: ubuntu-latest
+    needs: [build-acr-image]
+    if: github.event.ref == 'refs/heads/main'
     permissions:
       actions: read
       contents: read
       id-token: write
-    runs-on: ubuntu-latest
-    needs: [aks-build-image]
+    environment:
+      # Url should match manifest.yml
+      name: Demo
+      url: 'http://aspnetapp.adtr'
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Set common environment variables
-        run: grep -v "#" ./.env >> $GITHUB_ENV
+      - uses: actions/checkout@v4
+
       - name: Azure login
-        uses: azure/login@v1.4.6
+        uses: azure/login@v2
         with:
           creds: '${{ secrets.AZURE_CREDENTIALS }}'
+
+      - name: Set common environment variables
+        run: grep -v "#" ./.env >> $GITHUB_ENV
+
       - name: Set up kubelogin for non-interactive login
         uses: azure/use-kubelogin@v1
         with:
-          kubelogin-version: 'v0.0.25'
+          kubelogin-version: 'v0.0.24'
+
       - name: Get K8s context
         uses: azure/aks-set-context@v4
         with:
@@ -58,6 +83,7 @@ jobs:
           cluster-name: ${{ env.CLUSTER_NAME }}
           admin: 'false'
           use-kubelogin: 'true'
+
       - name: Deploys application
         uses: Azure/k8s-deploy@v5
         with:

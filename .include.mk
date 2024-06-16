@@ -1,3 +1,6 @@
+
+#.PHONY: aks-stop aks-start acr-login kubeconfig az-create-application-insights install-extensions set-auth-ip
+
 aks-stop:
 	az aks stop --name $(CLUSTER_NAME) --resource-group $(RESOURCE_GROUP)
 
@@ -22,6 +25,10 @@ az-create-application-insights:
 
 install-extensions:
 	az extension add --name aks-preview
+
+CA-CRT=$(shell kubectl -n cert-manager get secret test-ca-secret -o jsonpath='{.data.ca\.crt}' | base64 -d)
+test-ca-certificate: # Test with custom CA certificate
+	curl -v --cacert <<<$(shell"$(CA-CRT)") -H "Host: aspnetapp.$(NAME)" https://$(LB_IP)/environment
 
 IP=$(shell curl -skL ifconfig.me)
 set-auth-ip:
