@@ -1,5 +1,5 @@
 
-#.PHONY: aks-stop aks-start acr-login kubeconfig az-create-application-insights install-extensions set-auth-ip
+.PHONY: aks-stop aks-start acr-login kubeconfig az-create-application-insights install-extensions set-auth-ip
 
 aks-stop:
 	az aks stop --name $(CLUSTER_NAME) --resource-group $(RESOURCE_GROUP)
