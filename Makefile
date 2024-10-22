@@ -2,8 +2,9 @@ MAKEFLAGS += --silent
 
 BASEDIR=$(shell git rev-parse --show-toplevel)
 GITHUB_SHA=$(shell git rev-parse --short HEAD)
+APP ?= aspnetapp
 IMAGE_NAME=$(CONTAINER_REGISTRY).azurecr.io/$(APP):$(VERSION)
-SOURCE_PATH=${BASEDIR)/src/$(APP)
+SOURCE_PATH=$(BASEDIR)/src/$(APP)
 DOCKERFILE=$(SOURCE_PATH)/Dockerfile
 DEPLOYMENT_MANIFEST_PATH=$(BASEDIR)/k8s/$(APP)/manifest.yml
 
@@ -37,36 +38,39 @@ aks-create: ## Create AKS cluster
 		--generate-ssh-keys \
 		--enable-managed-identity \
 		--enable-addons monitoring \
-		--enable-app-routing # --enable-cluster-autoscaler --min-count 1 --max-count 2
-	## az aks nodepool add -g $(RESOURCE_GROUP) --cluster-name $(CLUSTER_NAME) -n nodepool2 --enable-node-public-ip
+		--enable-app-routing
 	$(MAKE) kubeconfig
 	kubectl cluster-info
 	kubectl get nodes -o wide
-	# wait for webapprouting loadBalancer to be ready
+	# Wait for webapprouting loadBalancer to be ready
 	kubectl -n app-routing-system rollout status deployment/nginx
 	#kubectl -n app-routing-system wait --for=condition=available --timeout=10s deployment/nginx
 
 build-acr: ## Build and push image to CONTAINER_REGISTRY
-	$(foreach app,$(APPS), \
-		$(eval APP=$(app)) \
-		az acr build \
-			--image $(CONTAINER_REGISTRY)/$(APP):$(VERSION) \
-			--registry $(CONTAINER_REGISTRY) \
-			--file $(BASEDIR)/src/$(APP)/Dockerfile \
-			$(BASEDIR)/src/$(APP);)
+	@if [ -z "$(APP)" ]; then \
+		echo "Error: APP argument is required"; \
+		exit 1; \
+	fi
+	az acr build \
+		--image $(CONTAINER_REGISTRY)/$(APP):$(VERSION) \
+		--registry $(CONTAINER_REGISTRY) \
+		--file $(BASEDIR)/src/$(APP)/Dockerfile \
+		$(BASEDIR)/src/$(APP)
 
 deploy: ## Deploy app to AKS
-	$(foreach app,$(APPS), \
-		$(eval APP=$(app)) \
-		envsubst < $(BASEDIR)/k8s/$(APP)/manifest.yml | kubectl apply -f -; \
-		kubectl -n $(APP) wait --for=condition=available --timeout=600s deployment/$(APP); \
-		)
+	@if [ -z "$(APP)" ]; then \
+		echo "Error: APP argument is required"; \
+		exit 1; \
+	fi
+	envsubst < $(BASEDIR)/k8s/$(APP)/manifest.yml | kubectl apply -f -; \
+	kubectl -n $(APP) wait --for=condition=available --timeout=600s deployment/$(APP); \
 
-destroy: ## Delete app from AKS
-	$(foreach app,$(APPS), \
-		$(eval APP=$(app)) \
-		kubectl delete -f $(BASEDIR)/k8s/$(APP)/manifest.yml; \
-		)
+delete: ## Delete app from AKS
+	@if [ -z "$(APP)" ]; then \
+		echo "Error: APP argument is required"; \
+		exit 1; \
+	fi
+	envsubst < $(BASEDIR)/k8s/$(APP)/manifest.yml | kubectl delete -f -; \
 
 aks-show:
 	@echo $(shell az aks show --name $(CLUSTER_NAME) -g $(RESOURCE_GROUP) --query provisioningState -o tsv)
@@ -80,10 +84,6 @@ clean: aks-stop ## Delete AKS cluster and resource group
 	az group delete --name $(RESOURCE_GROUP) --yes --no-wait
 	az aks list
 	az acr list
-
-.PHONY: debug
-debug: ## Debug
-	printenv | sort
 
 .PHONY: help
 help:

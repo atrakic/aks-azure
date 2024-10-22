@@ -21,6 +21,19 @@ spec:
       containers:
       - name: ollama
         image: ollama/ollama:latest
+        imagePullPolicy: Always
+        env:
+          - name: OLLAMA_ORIGINS
+            value: "*"
+          - name: OLLAMA_HOST
+            value: "0.0.0.0"
+        # run command on container start
+        #command: ["/bin/ollama run codellama && /bin/ollama serve"]
+        #command: ["/bin/ollama run llama.3.2 && /bin/ollama serve"]
+        #resources:
+        #  limits:
+        #    cpu: "1"
+        #    memory: "1024Mi"  # "512Mi"
         ports:
         - name: http
           containerPort: 11434

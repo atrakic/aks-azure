@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "fastapi-ollama"
+version = "0.1.0"
+description = ""
+authors = ["Admir Trakic <atrakic@users.noreply.github.com>>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = {extras = ["standard"], version = "^0.115.0"}
+ollama = "^0.3.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

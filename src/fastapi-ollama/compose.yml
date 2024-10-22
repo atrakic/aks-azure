@@ -1,0 +1,10 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app
+    environment:
+      - OLLAMA_HOST=http://host.docker.internal:11434
+    ports:
+      - 8000:8000

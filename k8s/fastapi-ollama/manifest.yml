@@ -1,0 +1,91 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${APP}
+  annotations:
+    instrumentation.opentelemetry.io/inject-dotnet: "true"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${APP}
+  namespace: ${APP}
+spec:
+  selector:
+    matchLabels:
+      app: ${APP}
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: ${APP}
+    spec:
+      containers:
+        - name: ${APP}
+          image: ${CONTAINER_REGISTRY}/${APP}:${VERSION}
+          imagePullPolicy: Always  # IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+           - name: OLLAMA_HOST
+             value: http://ollama.ollama.svc.cluster.local:80
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${APP}
+  namespace: ${APP}
+spec:
+  selector:
+    app: ${APP}
+  ports:
+    - protocol: "TCP"
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP  # LoadBalancer
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ${APP}
+  namespace: ${APP}
+  annotations:
+    cert-manager.io/issuer: test-ca-issuer
+    #kubernetes.io/ingress.class: nginx
+spec:
+  #tls:
+  #  - hosts:
+  #    - "${APP}.${NAME}"
+  #    secretName: ${APP}-tls
+  ingressClassName: webapprouting.kubernetes.azure.com
+  rules:
+  - host: ${APP}.${NAME}
+    http:
+      paths:
+      - backend:
+          service:
+            name: ${APP}
+            port:
+              number: 8000
+        path: /
+        pathType: Prefix
