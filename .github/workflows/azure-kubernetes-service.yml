@@ -11,7 +11,7 @@ on:
 
   # Run after the ci workflow completes
   workflow_run:
-    workflows: ["ci"]
+    workflows: ["dotnet-ci"]
     types: [completed]
 
 jobs:
